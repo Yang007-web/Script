@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#fbf6ee">
+<title>Script Coach</title>
+<style>
+  :root {
+    --bg: #fbf6ee;
+    --card: #ffffff;
+    --ink: #1f2a37;
+    --muted: #667085;
+    --line: #e7dfd2;
+    --brand: #0f766e;
+    --brand-dark: #0b5a54;
+    --brand-soft: #dff3f0;
+    --accent: #e4572e;
+    --warn-bg: #fdecea;
+    --warn-ink: #a02c14;
+    --ok-bg: #e3f4e8;
+    --ok-ink: #1c6b3a;
+    --pron-bg: #fff0b8;
+    --pron-ink: #6b4e00;
+    --radius: 16px;
+    --nav-h: 68px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 17px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
+  }
+  header {
+    padding: calc(14px + env(safe-area-inset-top)) 16px 6px;
+    max-width: 640px; margin: 0 auto;
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  header h1 { font-size: 24px; margin: 0; letter-spacing: -0.02em; }
+  header h1 span { color: var(--brand); }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+  main { max-width: 640px; margin: 0 auto; padding: 8px 16px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  h2 { font-size: 18px; margin: 0 0 10px; }
+  label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+  .hint { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+
+  textarea, input[type="text"], input[type="password"], input[type="number"], select {
+    width: 100%;
+    font: inherit; /* 17px: stops iOS zooming on focus */
+    color: var(--ink);
+    background: #fffdf9;
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  textarea { min-height: 220px; resize: vertical; line-height: 1.5; }
+  textarea:focus, input:focus, select:focus, button:focus-visible {
+    outline: 3px solid var(--brand-soft); border-color: var(--brand);
+  }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .row > * { flex: 1; }
+  .limit-row { margin-top: 12px; }
+  .limit-row label { margin: 0; flex: 2; }
+  .limit-row input { flex: 1; min-width: 90px; text-align: center; }
+
+  button {
+    font: inherit; font-weight: 700;
+    border: 0; border-radius: 14px;
+    min-height: 54px; padding: 12px 18px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--brand); color: #fff; width: 100%; font-size: 18px; }
+  .btn-primary:active:not(:disabled) { background: var(--brand-dark); }
+  .btn-accent { background: var(--accent); color: #fff; width: 100%; font-size: 18px; }
+  .btn-ghost { background: #f1ebe0; color: var(--ink); }
+  .btn-small { min-height: 44px; padding: 8px 14px; font-size: 15px; }
+  .spinner {
+    display: inline-block; width: 18px; height: 18px; vertical-align: -3px; margin-right: 8px;
+    border: 3px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .estimate { margin-top: 10px; font-size: 15px; color: var(--muted); }
+  .badge {
+    display: block; margin-top: 8px; padding: 10px 12px; border-radius: 12px;
+    font-size: 15px; font-weight: 600;
+  }
+  .badge.warn { background: var(--warn-bg); color: var(--warn-ink); }
+  .badge.ok { background: var(--ok-bg); color: var(--ok-ink); }
+  .error {
+    background: var(--warn-bg); color: var(--warn-ink);
+    padding: 12px; border-radius: 12px; margin-top: 12px; font-size: 15px;
+  }
+  [hidden] { display: none !important; }
+
+  /* Fixed script */
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13.5px; color: var(--muted); margin-bottom: 10px; }
+  .script-out { font-size: 19px; line-height: 1.85; }
+  .script-out p { margin: 0 0 14px; }
+  .script-out strong { color: var(--brand-dark); }
+  .pause { color: var(--accent); font-weight: 800; padding: 0 3px; }
+  .pron {
+    background: var(--pron-bg); color: var(--pron-ink);
+    border-radius: 6px; padding: 1px 5px; cursor: pointer;
+    border-bottom: 2px dotted #c79a00;
+  }
+  .result-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .result-head h2 { margin: 0; }
+  ul.tips, ol.changes { margin: 0; padding: 0; list-style: none; }
+  ul.tips li { padding: 9px 0; border-top: 1px solid var(--line); display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+  ul.tips li:first-child { border-top: 0; }
+  ul.tips b { background: var(--pron-bg); color: var(--pron-ink); border-radius: 6px; padding: 1px 6px; }
+  ol.changes { counter-reset: c; }
+  ol.changes li { counter-increment: c; padding: 12px 0 12px 40px; border-top: 1px solid var(--line); position: relative; font-size: 16px; }
+  ol.changes li:first-child { border-top: 0; }
+  ol.changes li::before {
+    content: counter(c); position: absolute; left: 0; top: 12px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--brand-soft); color: var(--brand-dark);
+    font-weight: 800; font-size: 14px; display: grid; place-items: center;
+  }
+  .before { color: var(--warn-ink); text-decoration: line-through; text-decoration-color: rgba(160,44,20,0.45); }
+  .after { color: var(--ok-ink); font-weight: 600; }
+  .why { display: block; color: var(--muted); font-size: 15px; margin-top: 2px; }
+
+  #tipBubble {
+    position: fixed; left: 16px; right: 16px; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 14px);
+    max-width: 608px; margin: 0 auto;
+    background: var(--ink); color: #fff; border-radius: 14px; padding: 14px 16px;
+    font-size: 17px; z-index: 30; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  }
+  #tipBubble b { color: #ffe27a; }
+
+  /* Timer */
+  .timer { position: sticky; top: 8px; z-index: 10; text-align: center; }
+  .timer-time { font-size: 46px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1.1; }
+  .timer-time.over { color: var(--accent); }
+  .timer-sub { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+  .bar { height: 8px; background: #f1ebe0; border-radius: 99px; overflow: hidden; margin: 8px 0 12px; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--brand); border-radius: 99px; }
+  .bar i.over { background: var(--accent); }
+
+  /* Cue cards */
+  .cue {
+    min-height: 300px; display: flex; flex-direction: column; justify-content: center;
+    padding: 24px 22px; border-left: 8px solid var(--brand);
+    user-select: none; -webkit-user-select: none;
+  }
+  .cue .count { color: var(--muted); font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+  .cue h3 { font-size: 24px; margin: 6px 0 14px; color: var(--brand-dark); line-height: 1.2; }
+  .cue ul { margin: 0; padding-left: 26px; }
+  .cue li { font-size: 26px; line-height: 1.3; font-weight: 600; margin-bottom: 14px; }
+  .cue li::marker { color: var(--accent); }
+  .dots { display: flex; justify-content: center; gap: 6px; margin: 2px 0 12px; flex-wrap: wrap; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+  .dots i.on { background: var(--brand); }
+  .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
+
+  /* Bottom nav */
+  nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: rgba(255,255,255,0.96); border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav div { max-width: 640px; margin: 0 auto; display: flex; }
+  nav button {
+    flex: 1; background: none; border-radius: 0; min-height: var(--nav-h);
+    color: var(--muted); font-size: 13px; font-weight: 700;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  }
+  nav button span { font-size: 24px; line-height: 1; }
+  nav button.active { color: var(--brand); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Script <span>Coach</span></h1>
+  <p>Say it clearly. Say it on time.</p>
+</header>
+
+<main>
+  <!-- ================= SCRIPT VIEW ================= -->
+  <section class="view active" id="view-script">
+    <div class="panel">
+      <label for="script">Your script</label>
+      <textarea id="script" placeholder="Paste your presentation script here…"></textarea>
+      <div class="row limit-row">
+        <label for="limit">Time limit (minutes, optional)</label>
+        <input id="limit" type="number" inputmode="decimal" min="0" step="0.5" placeholder="e.g. 5">
+      </div>
+      <div class="estimate" id="origEstimate"></div>
+    </div>
+
+    <button class="btn-primary" id="fixBtn">Fix my script</button>
+    <div class="error" id="fixError" hidden></div>
+
+    <div id="result" hidden>
+      <div class="panel" style="margin-top:14px">
+        <div class="result-head">
+          <h2>Improved script</h2>
+          <button class="btn-ghost btn-small" id="copyBtn">Copy</button>
+        </div>
+        <div class="legend">
+          <span><span class="pause">/</span> pause or breathe</span>
+          <span><strong>bold</strong> = stress this word</span>
+          <span><span class="pron">yellow</span> = tap for how to say it</span>
+        </div>
+        <div class="script-out" id="fixedOut"></div>
+        <div class="estimate" id="fixedEstimate"></div>
+      </div>
+
+      <div class="panel" id="pronPanel">
+        <h2>Pronunciation tips</h2>
+        <ul class="tips" id="pronList"></ul>
+      </div>
+
+      <div class="panel">
+        <h2>What I changed</h2>
+        <ol class="changes" id="changesList"></ol>
+      </div>
+
+      <button class="btn-accent" id="cardsBtn">Make cue cards</button>
+      <div class="error" id="cardsError" hidden></div>
+    </div>
+  </section>
+
+  <!-- ================= CARDS VIEW ================= -->
+  <section class="view" id="view-cards">
+    <div class="panel timer">
+      <div class="timer-time" id="timerTime">0:00</div>
+      <div class="timer-sub" id="timerSub">Practice timer</div>
+      <div class="bar" id="timerBarWrap" hidden><i id="timerBar"></i></div>
+      <div class="row">
+        <button class="btn-primary" id="timerToggle">Start</button>
+        <button class="btn-ghost" id="timerReset" style="flex:0 0 100px">Reset</button>
+      </div>
+    </div>
+
+    <div id="cardsEmpty" class="panel empty">
+      <p><b>No cue cards yet.</b></p>
+      <p>Fix your script first, then tap “Make cue cards”.</p>
+      <button class="btn-ghost" data-go="script">Go to script</button>
+    </div>
+
+    <div id="cardsArea" hidden>
+      <div class="panel cue" id="cue"></div>
+      <div class="dots" id="dots"></div>
+      <div class="row">
+        <button class="btn-ghost" id="backBtn">← Back</button>
+        <button class="btn-primary" id="nextBtn">Next →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SETTINGS VIEW ================= -->
+  <section class="view" id="view-settings">
+    <div class="panel">
+      <h2>Claude API key</h2>
+      <label for="apiKey">Paste your key</label>
+      <input id="apiKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-…">
+      <div class="row" style="margin-top:10px">
+        <button class="btn-primary" id="saveKey">Save</button>
+        <button class="btn-ghost" id="showKey" style="flex:0 0 100px">Show</button>
+      </div>
+      <p class="hint" id="keyStatus"></p>
+      <p class="hint">Get a key at console.anthropic.com. It is saved only in this browser on this device and is sent only to Anthropic. Don't use this app on a shared computer.</p>
+    </div>
+
+    <div class="panel">
+      <h2>AI model</h2>
+      <select id="model">
+        <option value="claude-opus-5-5">Claude Opus 5.5 — best quality (default)</option>
+        <option value="claude-sonnet-5-5">Claude Sonnet 5.5 — faster, cheaper</option>
+        <option value="claude-haiku-5-5">Claude Haiku 5.5 — fastest, cheapest</option>
+      </select>
+    </div>
+
+    <div class="panel">
+      <h2>Saved data</h2>
+      <p class="hint" style="margin:0 0 10px">Your last script, results and cue cards are saved on this device.</p>
+      <button class="btn-ghost" id="clearData" style="width:100%">Clear script and results</button>
+    </div>
+  </section>
+</main>
+
+<div id="tipBubble" hidden></div>
+
+<nav>
+  <div>
+    <button data-go="script" class="active"><span>✏️</span>Script</button>
+    <button data-go="cards"><span>🗂️</span>Cue cards</button>
+    <button data-go="settings"><span>⚙️</span>Settings</button>
+  </div>
+</nav>
+
+<script>
+(() => {
+  'use strict';
+
+  const WPM = 130;
+  const STORE_KEY = 'scriptCoach.v1';
+  const API_KEY_KEY = 'scriptCoach.apiKey';
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- State (saved in localStorage) ----------
+  const state = Object.assign(
+    { script: '', limit: '', result: null, cards: null, cardIndex: 0, model: 'claude-opus-5-5' },
+    load(STORE_KEY)
+  );
+  function load(key) {
+    try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; }
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch {}
+  }
+  function getKey() {
+    try { return localStorage.getItem(API_KEY_KEY) || ''; } catch { return ''; }
+  }
+
+  // ---------- Text helpers ----------
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // Markup from Claude:  **stress**   /  (pause)   [[word|tip]]
+  function plainText(marked, keepPauses) {
+    let t = String(marked).replace(/\[\[([^\]|]+)\|[^\]]*\]\]/g, '$1').replace(/\*\*/g, '');
+    if (!keepPauses) t = t.replace(/(^|\s)\/+(?=\s|$)/g, '$1');
+    return t.replace(/[ \t]+/g, ' ').trim();
+  }
+  function renderMarked(marked) {
+    return String(marked).split(/\n\s*\n|\n/).filter((p) => p.trim()).map((p) => {
+      let h = esc(p.trim());
+      h = h.replace(/\[\[([^\]|]+)\|([^\]]*)\]\]/g, (_, w, tip) =>
+        `<span class="pron" role="button" tabindex="0" data-word="${w.replace(/\*\*/g, '')}" data-tip="${tip.replace(/\*/g, '')}">${w}</span>`);
+      h = h.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      h = h.replace(/(^|\s)\/+(?=\s|$)/g, '$1<span class="pause">/</span>');
+      return `<p>${h}</p>`;
+    }).join('');
+  }
+  function countWords(text) {
+    return (String(text).match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) || []).length;
+  }
+  function fmtDuration(sec) {
+    sec = Math.round(sec);
+    const m = Math.floor(sec / 60), s = sec % 60;
+    if (m === 0) return `${s} sec`;
+    return s === 0 ? `${m} min` : `${m} min ${s} sec`;
+  }
+  function limitSeconds() {
+    const n = parseFloat(state.limit);
+    return n > 0 ? n * 60 : 0;
+  }
+  function estimateHtml(text) {
+    const words = countWords(text);
+    if (!words) return '';
+    const sec = (words / WPM) * 60;
+    let html = `${words} words · about <b>${fmtDuration(sec)}</b> to say`;
+    const lim = limitSeconds();
+    if (lim) {
+      if (sec > lim) {
+        const extra = Math.ceil(words - (lim / 60) * WPM);
+        html += `<span class="badge warn">⚠️ Over your ${fmtDuration(lim)} limit by ${fmtDuration(sec - lim)}. Cut about ${extra} words.</span>`;
+      } else {
+        html += `<span class="badge ok">✓ Fits your ${fmtDuration(lim)} limit.</span>`;
+      }
+    }
+    return html;
+  }
+
+  // ---------- Claude API ----------
+  async function callClaude({ system, user, schema, effort }) {
+    const key = getKey();
+    if (!key) {
+      go('settings');
+      $('keyStatus').textContent = 'Please add your API key first.';
+      throw new Error('Add your Claude API key in Settings first.');
+    }
+    const body = {
+      model: state.model,
+      max_tokens: 16000,
+      system,
+      messages: [{ role: 'user', content: user }],
+      output_config: { effort, format: { type: 'json_schema', schema } },
+    };
+    const headers = {
+      'content-type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    };
+    // If the model declines a request, let the API retry it on a fallback model.
+    const canFallback = state.model !== 'claude-haiku-5-5';
+
+    const send = async (withFallback) => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 180000);
+      try {
+        return await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          signal: ctrl.signal,
+          headers: withFallback ? { ...headers, 'anthropic-beta': 'server-side-fallback-2026-07-01' } : headers,
+          body: JSON.stringify(withFallback ? { ...body, fallbacks: 'default' } : body),
+        });
+      } catch (e) {
+        throw new Error(e.name === 'AbortError'
+          ? 'That took too long. Please try again.'
+          : 'Could not reach Claude. Check your internet connection and try again.');
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+
+    let res = await send(canFallback);
+    if (res.status === 400 && canFallback) res = await send(false);
+
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json()).error?.message || ''; } catch {}
+      if (res.status === 401) throw new Error('Your API key was not accepted. Check it in Settings.');
+      if (res.status === 403) throw new Error('This API key is not allowed to do that. ' + detail);
+      if (res.status === 429) throw new Error('Too many requests right now. Wait a minute and try again.');
+      if (res.status >= 500) throw new Error('Claude is busy right now. Please try again in a moment.');
+      throw new Error(detail || `Something went wrong (error ${res.status}).`);
+    }
+
+    const data = await res.json();
+    if (data.stop_reason === 'refusal') throw new Error('Claude could not help with this text. Try changing it a little.');
+    if (data.stop_reason === 'max_tokens') throw new Error('Your script is too long to do in one go. Try a shorter part.');
+    const text = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
+    try { return JSON.parse(text); } catch { throw new Error('Claude sent an answer I could not read. Please try again.'); }
+  }
+
+  const FIX_SYSTEM = `You are a friendly presentation coach for a polytechnic Business Administration student whose first language is not English. You improve presentation scripts so they are correct and easy to say out loud.
+
+Rewrite the student's script following these rules:
+- Fix all grammar, word choice and spelling mistakes.
+- Use short sentences that are easy to say in one breath. Split long sentences.
+- Use simple, natural spoken English. It should sound like a confident student talking, not a formal essay. Keep necessary business terms.
+- Keep the student's original meaning, ideas, facts, numbers, names and order. Do not add new ideas, examples or facts, and do not remove any idea.
+- Keep the paragraph breaks (use a blank line between paragraphs).
+
+Mark up the improved script with exactly these three marks and nothing else (no headings, no other Markdown):
+1. Pauses: put " / " (a slash with a space on each side) where the speaker should pause or breathe: after each sentence, and at natural breaks inside longer sentences.
+2. Stress: wrap the key words the speaker should stress in **double asterisks**. Usually one or two per sentence, only the words that carry the main meaning.
+3. Pronunciation: for words that are likely hard to pronounce for a non-native speaker (long words, business terms, silent letters, tricky stress), write [[word|tip]]. The tip is a simple respelling with the stressed syllable in CAPITALS, for example [[entrepreneur|on-truh-pruh-NUR]] or [[strategy|STRA-tuh-jee]]. No phonetic symbols. Mark each hard word only the first time it appears. If a hard word should also be stressed, put the asterisks inside: [[**word**|tip]].
+
+Then list the student's top 3 to 5 mistakes from the original script (fewer only if there really are fewer), most important first. For each: "before" is the short original phrase, "after" is your corrected phrase, and "why" is one short, simple line that teaches the rule so the student can avoid the mistake next time. Be kind and clear.
+
+Also return every pronunciation word you marked, with the same tip, in the pronunciation list.`;
+
+  const FIX_SCHEMA = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['fixed_script', 'changes', 'pronunciation'],
+    properties: {
+      fixed_script: { type: 'string', description: 'The improved script with / pauses, **stress** and [[word|tip]] marks.' },
+      changes: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['before', 'after', 'why'],
+          properties: {
+            before: { type: 'string' },
+            after: { type: 'string' },
+            why: { type: 'string', description: 'One short line explaining the mistake.' },
+          },
+        },
+      },
+      pronunciation: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['word', 'tip'],
+          properties: { word: { type: 'string' }, tip: { type: 'string' } },
+        },
+      },
+    },
+  };
+
+  const CARDS_SYSTEM = `You turn a presentation script into cue cards the speaker can glance at while presenting.
+
+Rules:
+- Follow the script's order and cover every main point. Do not add ideas that are not in the script.
+- Each card covers one part of the talk and has a short title (1 to 4 words).
+- Each card has at most 4 bullets. Each bullet is a few key words (about 2 to 6 words), not a full sentence. Keep important numbers and names.
+- Use as many cards as the script needs, usually one card for every 30 to 60 seconds of speaking.
+- Plain text only, no Markdown.`;
+
+  const CARDS_SCHEMA = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['cards'],
+    properties: {
+      cards: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['title', 'bullets'],
+          properties: {
+            title: { type: 'string' },
+            bullets: { type: 'array', items: { type: 'string' } },
+          },
+        },
+      },
+    },
+  };
+
+  // ---------- Script view ----------
+  function renderEstimates() {
+    $('origEstimate').innerHTML = estimateHtml(state.script);
+    if (state.result) $('fixedEstimate').innerHTML = estimateHtml(plainText(state.result.fixed_script));
+    renderTimer();
+  }
+
+  function renderResult() {
+    const r = state.result;
+    $('result').hidden = !r;
+    if (!r) return;
+    $('fixedOut').innerHTML = renderMarked(r.fixed_script);
+    const pron = r.pronunciation || [];
+    $('pronPanel').hidden = pron.length === 0;
+    $('pronList').innerHTML = pron.map((p) => `<li><b>${esc(p.word)}</b><span>${esc(p.tip)}</span></li>`).join('');
+    $('changesList').innerHTML = (r.changes || []).map((c) =>
+      `<li><span class="before">${esc(c.before)}</span> → <span class="after">${esc(c.after)}</span><span class="why">${esc(c.why)}</span></li>`
+    ).join('') || '<li>No big mistakes found. Nice work!</li>';
+    $('cardsBtn').textContent = state.cards ? 'Make new cue cards' : 'Make cue cards';
+    renderEstimates();
+  }
+
+  function setBusy(btn, busy, label) {
+    btn.disabled = busy;
+    if (busy) { btn.dataset.label = btn.textContent; btn.innerHTML = `<span class="spinner"></span>${label}`; }
+    else btn.textContent = btn.dataset.label;
+  }
+  function showError(el, msg) { el.textContent = msg; el.hidden = !msg; }
+
+  $('script').addEventListener('input', (e) => { state.script = e.target.value; save(); renderEstimates(); });
+  $('limit').addEventListener('input', (e) => { state.limit = e.target.value; save(); renderEstimates(); });
+
+  $('fixBtn').addEventListener('click', async () => {
+    const btn = $('fixBtn');
+    showError($('fixError'), '');
+    if (!state.script.trim()) return showError($('fixError'), 'Paste your script in the box first.');
+    setBusy(btn, true, 'Fixing… up to a minute');
+    try {
+      const lim = limitSeconds();
+      let user = `Here is my script:\n\n<script_text>\n${state.script.trim()}\n</script_text>`;
+      if (lim) {
+        user += `\n\nMy time limit is ${state.limit} minutes. At about ${WPM} words per minute that is about ${Math.round((lim / 60) * WPM)} words. If my script is longer than that, tighten wordy sentences where you can, but do not remove any idea.`;
+      }
+      const r = await callClaude({ system: FIX_SYSTEM, user, schema: FIX_SCHEMA, effort: 'medium' });
+      if (!r.fixed_script) throw new Error('Claude sent an empty answer. Please try again.');
+      state.result = r;
+      state.cards = null; state.cardIndex = 0;
+      save();
+      setBusy(btn, false);
+      renderResult(); renderCards();
+      $('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) {
+      setBusy(btn, false);
+      showError($('fixError'), e.message);
+    }
+  });
+
+  $('cardsBtn').addEventListener('click', async () => {
+    const btn = $('cardsBtn');
+    showError($('cardsError'), '');
+    setBusy(btn, true, 'Making cards…');
+    try {
+      const r = await callClaude({
+        system: CARDS_SYSTEM,
+        user: `Make cue cards for this script:\n\n<script_text>\n${plainText(state.result.fixed_script)}\n</script_text>`,
+        schema: CARDS_SCHEMA,
+        effort: 'low',
+      });
+      const cards = (r.cards || [])
+        .map((c) => ({ title: c.title, bullets: (c.bullets || []).slice(0, 4) }))
+        .filter((c) => c.bullets.length);
+      if (!cards.length) throw new Error('Claude did not make any cards. Please try again.');
+      state.cards = cards; state.cardIndex = 0;
+      save();
+      setBusy(btn, false);
+      renderResult(); renderCards();
+      go('cards');
+    } catch (e) {
+      setBusy(btn, false);
+      showError($('cardsError'), e.message);
+    }
+  });
+
+  $('copyBtn').addEventListener('click', async () => {
+    const text = plainText(state.result.fixed_script, true);
+    try { await navigator.clipboard.writeText(text); }
+    catch {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+    }
+    $('copyBtn').textContent = 'Copied ✓';
+    setTimeout(() => ($('copyBtn').textContent = 'Copy'), 1500);
+  });
+
+  // Pronunciation tip bubble
+  let tipTimer;
+  function showTip(el) {
+    const b = $('tipBubble');
+    b.innerHTML = `Say <b>${esc(el.dataset.word)}</b> like: <b>${esc(el.dataset.tip)}</b>`;
+    b.hidden = false;
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(() => (b.hidden = true), 5000);
+  }
+  document.addEventListener('click', (e) => {
+    const p = e.target.closest('.pron[data-tip]');
+    if (p) showTip(p); else $('tipBubble').hidden = true;
+  });
+  $('fixedOut').addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('pron')) { e.preventDefault(); showTip(e.target); }
+  });
+
+  // ---------- Cue cards ----------
+  function renderCards() {
+    const cards = state.cards;
+    $('cardsEmpty').hidden = !!cards;
+    $('cardsArea').hidden = !cards;
+    if (!cards) return;
+    const i = state.cardIndex = Math.min(Math.max(state.cardIndex, 0), cards.length - 1);
+    const c = cards[i];
+    $('cue').innerHTML =
+      `<div class="count">Card ${i + 1} of ${cards.length}</div>` +
+      `<h3>${esc(c.title)}</h3>` +
+      `<ul>${c.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`;
+    $('dots').innerHTML = cards.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('');
+    $('backBtn').disabled = i === 0;
+    $('nextBtn').disabled = i === cards.length - 1;
+  }
+  function moveCard(d) {
+    if (!state.cards) return;
+    state.cardIndex += d; save(); renderCards();
+  }
+  $('backBtn').addEventListener('click', () => moveCard(-1));
+  $('nextBtn').addEventListener('click', () => moveCard(1));
+  document.addEventListener('keydown', (e) => {
+    if (!$('view-cards').classList.contains('active')) return;
+    if (e.key === 'ArrowRight') moveCard(1);
+    if (e.key === 'ArrowLeft') moveCard(-1);
+  });
+  let touchX = null;
+  $('cue').addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
+  $('cue').addEventListener('touchend', (e) => {
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    touchX = null;
+    if (Math.abs(dx) > 50) moveCard(dx < 0 ? 1 : -1);
+  });
+
+  // ---------- Practice timer ----------
+  const timer = { running: false, startedAt: 0, elapsed: 0, tick: null };
+  function timerMs() { return timer.elapsed + (timer.running ? Date.now() - timer.startedAt : 0); }
+  function renderTimer() {
+    const sec = Math.floor(timerMs() / 1000);
+    const lim = limitSeconds();
+    const over = lim > 0 && sec > lim;
+    $('timerTime').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+    $('timerTime').classList.toggle('over', over);
+    $('timerBarWrap').hidden = !lim;
+    if (lim) {
+      $('timerBar').style.width = Math.min(100, (sec / lim) * 100) + '%';
+      $('timerBar').classList.toggle('over', over);
+      $('timerSub').textContent = over
+        ? `Over your ${fmtDuration(lim)} limit by ${fmtDuration(sec - lim)}`
+        : `${fmtDuration(lim - sec)} left of ${fmtDuration(lim)}`;
+    } else {
+      $('timerSub').textContent = 'Practice timer';
+    }
+    $('timerToggle').textContent = timer.running ? 'Stop' : (timer.elapsed ? 'Continue' : 'Start');
+  }
+  $('timerToggle').addEventListener('click', () => {
+    if (timer.running) {
+      timer.elapsed = timerMs(); timer.running = false; clearInterval(timer.tick);
+    } else {
+      timer.startedAt = Date.now(); timer.running = true; timer.tick = setInterval(renderTimer, 250);
+    }
+    renderTimer();
+  });
+  $('timerReset').addEventListener('click', () => {
+    timer.running = false; timer.elapsed = 0; clearInterval(timer.tick); renderTimer();
+  });
+
+  // ---------- Settings ----------
+  function renderKeyStatus() {
+    const k = getKey();
+    $('keyStatus').textContent = k ? `Key saved (ends in …${k.slice(-4)}).` : 'No key saved yet.';
+  }
+  $('saveKey').addEventListener('click', () => {
+    const k = $('apiKey').value.trim();
+    try {
+      if (k) localStorage.setItem(API_KEY_KEY, k); else localStorage.removeItem(API_KEY_KEY);
+      renderKeyStatus();
+      if (k) $('keyStatus').textContent = '✓ ' + $('keyStatus').textContent;
+    } catch {
+      $('keyStatus').textContent = 'Could not save. Your browser is blocking storage (private mode?).';
+    }
+  });
+  $('showKey').addEventListener('click', () => {
+    const inp = $('apiKey');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    $('showKey').textContent = inp.type === 'password' ? 'Show' : 'Hide';
+  });
+  $('model').addEventListener('change', (e) => { state.model = e.target.value; save(); });
+  $('clearData').addEventListener('click', () => {
+    if (!confirm('Delete your saved script, results and cue cards? Your API key stays.')) return;
+    state.script = ''; state.limit = ''; state.result = null; state.cards = null; state.cardIndex = 0;
+    save(); init();
+  });
+
+  // ---------- Navigation ----------
+  function go(name) {
+    document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + name));
+    document.querySelectorAll('nav button').forEach((b) => b.classList.toggle('active', b.dataset.go === name));
+    window.scrollTo(0, 0);
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-go]');
+    if (b) go(b.dataset.go);
+  });
+
+  function init() {
+    $('script').value = state.script;
+    $('limit').value = state.limit;
+    $('apiKey').value = getKey();
+    $('model').value = state.model;
+    if (!$('model').value) { state.model = 'claude-opus-5-5'; $('model').value = state.model; }
+    renderKeyStatus();
+    renderResult();
+    renderEstimates();
+    renderCards();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
